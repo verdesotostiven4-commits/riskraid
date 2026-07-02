@@ -1,5 +1,7 @@
 local ItemConfig = {}
 
+ItemConfig.MaxBackpackWeight = 10
+
 ItemConfig.RarityOrder = {
 	Common = 1,
 	Uncommon = 2,
@@ -31,6 +33,13 @@ ItemConfig.Items = {
 		value = 60,
 		weight = 1,
 	},
+	MedKit = {
+		id = "MedKit",
+		name = "Med Kit",
+		rarity = "Uncommon",
+		value = 80,
+		weight = 1,
+	},
 	VaultKey = {
 		id = "VaultKey",
 		name = "Vault Key",
@@ -45,6 +54,13 @@ ItemConfig.Items = {
 		value = 420,
 		weight = 2,
 	},
+	PhantomChip = {
+		id = "PhantomChip",
+		name = "Phantom Chip",
+		rarity = "Epic",
+		value = 680,
+		weight = 2,
+	},
 	GoldRelic = {
 		id = "GoldRelic",
 		name = "Gold Relic",
@@ -52,15 +68,33 @@ ItemConfig.Items = {
 		value = 1250,
 		weight = 3,
 	},
+	BlackCard = {
+		id = "BlackCard",
+		name = "Black Card",
+		rarity = "Mythic",
+		value = 3000,
+		weight = 1,
+	},
 }
 
-ItemConfig.LootTable = {
-	{ itemId = "ScrapMetal", weight = 45 },
-	{ itemId = "BatteryCell", weight = 30 },
-	{ itemId = "BlueCircuit", weight = 16 },
-	{ itemId = "VaultKey", weight = 7 },
-	{ itemId = "EncryptedCore", weight = 2 },
-	{ itemId = "GoldRelic", weight = 0.5 },
+ItemConfig.LootTables = {
+	Normal = {
+		{ itemId = "ScrapMetal", weight = 40 },
+		{ itemId = "BatteryCell", weight = 28 },
+		{ itemId = "BlueCircuit", weight = 18 },
+		{ itemId = "MedKit", weight = 8 },
+		{ itemId = "VaultKey", weight = 4 },
+		{ itemId = "EncryptedCore", weight = 1.5 },
+		{ itemId = "GoldRelic", weight = 0.4 },
+	},
+	HighRisk = {
+		{ itemId = "BlueCircuit", weight = 28 },
+		{ itemId = "VaultKey", weight = 25 },
+		{ itemId = "EncryptedCore", weight = 20 },
+		{ itemId = "PhantomChip", weight = 12 },
+		{ itemId = "GoldRelic", weight = 5 },
+		{ itemId = "BlackCard", weight = 1 },
+	},
 }
 
 function ItemConfig.getItem(itemId)
@@ -80,17 +114,47 @@ function ItemConfig.getInventoryValue(itemIds)
 	return total
 end
 
-function ItemConfig.rollLoot(randomGenerator)
+function ItemConfig.getInventoryWeight(itemIds)
+	local total = 0
+
+	for _, itemId in ipairs(itemIds) do
+		local item = ItemConfig.getItem(itemId)
+		if item then
+			total += item.weight
+		end
+	end
+
+	return total
+end
+
+function ItemConfig.getRankFromStashValue(stashValue)
+	if stashValue >= 25000 then
+		return "LEGEND"
+	elseif stashValue >= 10000 then
+		return "DIAMOND"
+	elseif stashValue >= 4000 then
+		return "GOLD"
+	elseif stashValue >= 1500 then
+		return "SILVER"
+	elseif stashValue >= 500 then
+		return "BRONZE"
+	end
+
+	return "ROOKIE"
+end
+
+function ItemConfig.rollLoot(randomGenerator, lootTableName)
+	local lootTable = ItemConfig.LootTables[lootTableName or "Normal"] or ItemConfig.LootTables.Normal
 	local totalWeight = 0
 
-	for _, entry in ipairs(ItemConfig.LootTable) do
+	for _, entry in ipairs(lootTable) do
 		totalWeight += entry.weight
 	end
 
 	local roll = randomGenerator:NextNumber(0, totalWeight)
 	local current = 0
 
-	for _, entry in ipairs(ItemConfig.LootTable) do
+	for _, entry in ipairs(lootTable) do
 		current += entry.weight
 		if roll <= current then
 			return entry.itemId
