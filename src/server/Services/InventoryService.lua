@@ -24,7 +24,49 @@ function InventoryService.canAddItems(player, itemIds)
 	local snapshot = DataService.getSnapshot(player)
 	local currentWeight = ItemConfig.getInventoryWeight(snapshot.runInventory)
 	local addedWeight = ItemConfig.getInventoryWeight(itemIds)
-	return currentWeight + addedWeight <= ItemConfig.MaxBackpackWeight, currentWeight, addedWeight
+	return currentWeight + addedWeight <= ItemConfig.MaxBackpackWeight
+end
+
+function InventoryService.hasRunItem(player, itemId)
+	local snapshot = DataService.getSnapshot(player)
+	return ItemConfig.countItem(snapshot.runInventory, itemId) > 0
+end
+
+function InventoryService.claimStarterKit(player)
+	local claimed = DataService.claimStarterKit(player)
+	if claimed then
+		Remotes.message(player, "Starter kit added to stash. Equip gear before deploying.")
+	else
+		Remotes.message(player, "Starter kit is already available in your stash.")
+	end
+	InventoryService.refresh(player)
+	return claimed
+end
+
+function InventoryService.moveStashItemToRun(player, itemId)
+	local item = ItemConfig.getItem(itemId)
+	if not item then
+		warn(("Unknown itemId: %s"):format(tostring(itemId)))
+		return false
+	end
+
+	if not InventoryService.canAddItems(player, { itemId }) then
+		Remotes.message(player, ("Backpack full. Cannot equip %s."):format(item.name))
+		InventoryService.refresh(player)
+		return false
+	end
+
+	local removed = DataService.removeOneStashItem(player, itemId)
+	if not removed then
+		Remotes.message(player, ("No %s in stash. Loot or claim a starter kit."):format(item.name))
+		InventoryService.refresh(player)
+		return false
+	end
+
+	DataService.addRunItem(player, itemId, 1)
+	Remotes.message(player, ("Equipped %s into raid backpack."):format(item.name))
+	InventoryService.refresh(player)
+	return true
 end
 
 function InventoryService.addRunItem(player, itemId, amount, reason)
@@ -39,9 +81,8 @@ function InventoryService.addRunItem(player, itemId, amount, reason)
 		table.insert(itemsToAdd, itemId)
 	end
 
-	local canAdd = InventoryService.canAddItems(player, itemsToAdd)
-	if not canAdd then
-		Remotes.message(player, ("Backpack full. Cannot take %s. Extract or steal less."):format(item.name))
+	if not InventoryService.canAddItems(player, itemsToAdd) then
+		Remotes.message(player, ("Backpack full. Cannot take %s."):format(item.name))
 		InventoryService.refresh(player)
 		return false
 	end
@@ -56,11 +97,19 @@ function InventoryService.addRunItem(player, itemId, amount, reason)
 	return true
 end
 
+function InventoryService.deploy(player)
+	DataService.setInRaid(player, true)
+	InventoryService.refresh(player)
+	Remotes.message(player, "Deployed. Loot fast and extract alive.")
+end
+
 function InventoryService.extract(player)
 	local snapshotBefore = DataService.getSnapshot(player)
 	local itemsToMove = snapshotBefore.runInventory
 
 	if #itemsToMove <= 0 then
+		DataService.setInRaid(player, false)
+		InventoryService.refresh(player)
 		Remotes.message(player, "Extraction complete, but your backpack was empty.")
 		return false
 	end
@@ -80,9 +129,8 @@ function InventoryService.removeRunInventory(player)
 end
 
 function InventoryService.addLootBagItems(player, itemIds)
-	local canAdd = InventoryService.canAddItems(player, itemIds)
-	if not canAdd then
-		Remotes.message(player, "Loot bag is too heavy for your backpack. Extract first or reduce weight.")
+	if not InventoryService.canAddItems(player, itemIds) then
+		Remotes.message(player, "Loot bag is too heavy. Extract first or reduce weight.")
 		InventoryService.refresh(player)
 		return false
 	end
@@ -95,7 +143,7 @@ function InventoryService.addLootBagItems(player, itemIds)
 	InventoryService.refresh(player)
 
 	local value = ItemConfig.getInventoryValue(itemIds)
-	Remotes.message(player, ("Loot bag stolen: %d items. Value: $%d"):format(#itemIds, value))
+	Remotes.message(player, ("Loot bag collected: %d items. Value: $%d"):format(#itemIds, value))
 	return true
 end
 
