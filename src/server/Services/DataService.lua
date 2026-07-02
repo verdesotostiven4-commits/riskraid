@@ -10,6 +10,7 @@ local function createDefaultState()
 			extractions = 0,
 			deaths = 0,
 			lootBagsStolen = 0,
+			bestExtraction = 0,
 		},
 	}
 end
@@ -57,7 +58,7 @@ function DataService.addStashItem(player, itemId, amount)
 	end
 end
 
-function DataService.moveRunToStash(player)
+function DataService.moveRunToStash(player, runValue)
 	local state = DataService.getState(player)
 	local movedItems = state.runInventory
 
@@ -67,6 +68,10 @@ function DataService.moveRunToStash(player)
 
 	state.runInventory = {}
 	state.stats.extractions += 1
+
+	if runValue and runValue > state.stats.bestExtraction then
+		state.stats.bestExtraction = runValue
+	end
 
 	return movedItems
 end
@@ -96,6 +101,7 @@ function DataService.getSnapshot(player)
 			extractions = state.stats.extractions,
 			deaths = state.stats.deaths,
 			lootBagsStolen = state.stats.lootBagsStolen,
+			bestExtraction = state.stats.bestExtraction,
 		},
 	}
 end
