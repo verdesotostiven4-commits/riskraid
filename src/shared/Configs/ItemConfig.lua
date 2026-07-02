@@ -1,6 +1,6 @@
 local ItemConfig = {}
 
-ItemConfig.MaxBackpackWeight = 10
+ItemConfig.MaxBackpackWeight = 12
 
 ItemConfig.RarityOrder = {
 	Common = 1,
@@ -12,6 +12,30 @@ ItemConfig.RarityOrder = {
 }
 
 ItemConfig.Items = {
+	BasicBlaster = {
+		id = "BasicBlaster",
+		name = "Pulse Blaster",
+		rarity = "Uncommon",
+		value = 200,
+		weight = 2,
+		category = "Weapon",
+	},
+	ArmorPlate = {
+		id = "ArmorPlate",
+		name = "Armor Plate",
+		rarity = "Uncommon",
+		value = 120,
+		weight = 2,
+		category = "Gear",
+	},
+	SignalScanner = {
+		id = "SignalScanner",
+		name = "Signal Scanner",
+		rarity = "Rare",
+		value = 260,
+		weight = 1,
+		category = "Gear",
+	},
 	ScrapMetal = {
 		id = "ScrapMetal",
 		name = "Scrap Metal",
@@ -39,6 +63,7 @@ ItemConfig.Items = {
 		rarity = "Uncommon",
 		value = 80,
 		weight = 1,
+		category = "Consumable",
 	},
 	VaultKey = {
 		id = "VaultKey",
@@ -77,6 +102,15 @@ ItemConfig.Items = {
 	},
 }
 
+ItemConfig.StarterKit = {
+	"BasicBlaster",
+	"MedKit",
+	"MedKit",
+	"ArmorPlate",
+	"BatteryCell",
+	"ScrapMetal",
+}
+
 ItemConfig.LootTables = {
 	Normal = {
 		{ itemId = "ScrapMetal", weight = 40 },
@@ -94,6 +128,13 @@ ItemConfig.LootTables = {
 		{ itemId = "PhantomChip", weight = 12 },
 		{ itemId = "GoldRelic", weight = 5 },
 		{ itemId = "BlackCard", weight = 1 },
+	},
+	BotDrop = {
+		{ itemId = "BatteryCell", weight = 30 },
+		{ itemId = "BlueCircuit", weight = 24 },
+		{ itemId = "VaultKey", weight = 12 },
+		{ itemId = "EncryptedCore", weight = 5 },
+		{ itemId = "SignalScanner", weight = 2 },
 	},
 }
 
@@ -141,6 +182,16 @@ function ItemConfig.getRankFromStashValue(stashValue)
 	end
 
 	return "ROOKIE"
+end
+
+function ItemConfig.countItem(itemIds, itemId)
+	local count = 0
+	for _, existingItemId in ipairs(itemIds) do
+		if existingItemId == itemId then
+			count += 1
+		end
+	end
+	return count
 end
 
 function ItemConfig.rollLoot(randomGenerator, lootTableName)
