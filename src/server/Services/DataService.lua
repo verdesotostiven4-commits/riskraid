@@ -1,7 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ItemConfig = require(ReplicatedStorage.RiskRaidShared.Configs.ItemConfig)
-local ProfileStore = require(script.Parent.ProfileStore)
 
 local DataService = {}
 
@@ -37,41 +36,6 @@ local function createDefaultState()
 	}
 end
 
-local function sanitizeLoadedState(data)
-	local state = createDefaultState()
-	if type(data) ~= "table" then
-		return state
-	end
-
-	if type(data.stash) == "table" then
-		state.stash = copyArray(data.stash)
-	end
-
-	if type(data.stats) == "table" then
-		for key, value in pairs(data.stats) do
-			if type(value) == "number" and state.stats[key] ~= nil then
-				state.stats[key] = value
-			end
-		end
-	end
-
-	if type(data.starterClaimed) == "boolean" then
-		state.starterClaimed = data.starterClaimed
-	end
-
-	state.runInventory = {}
-	state.inRaid = false
-	return state
-end
-
-local function buildSaveData(state)
-	return {
-		stash = copyArray(state.stash),
-		stats = state.stats,
-		starterClaimed = state.starterClaimed,
-	}
-end
-
 function DataService.refreshLeaderstats(player)
 	local state = DataService.getState(player)
 	local leaderstats = player:FindFirstChild("leaderstats")
@@ -101,18 +65,13 @@ function DataService.refreshLeaderstats(player)
 end
 
 function DataService.setupPlayer(player)
-	local loaded = ProfileStore.load(player)
-	playerStates[player] = sanitizeLoadedState(loaded)
+	playerStates[player] = createDefaultState()
 	DataService.refreshLeaderstats(player)
 	return playerStates[player]
 end
 
 function DataService.savePlayer(player)
-	local state = playerStates[player]
-	if not state then
-		return false
-	end
-	return ProfileStore.save(player, buildSaveData(state))
+	return playerStates[player] ~= nil
 end
 
 function DataService.cleanupPlayer(player)
