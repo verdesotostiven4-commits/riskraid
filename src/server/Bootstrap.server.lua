@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
 local Services = script.Parent.Services
 local DataService = require(Services.DataService)
@@ -26,6 +27,8 @@ local function createPart(parent, name, size, position, brickColor, material, tr
 	part.BrickColor = BrickColor.new(brickColor)
 	part.Material = material or Enum.Material.SmoothPlastic
 	part.Transparency = transparency or 0
+	part.TopSurface = Enum.SurfaceType.Smooth
+	part.BottomSurface = Enum.SurfaceType.Smooth
 	part.Parent = parent
 	return part
 end
@@ -49,7 +52,8 @@ local function createSign(parent, name, text, position, size, textColor)
 end
 
 local function createPromptPart(parent, name, position, colorName, objectText, actionText, onTriggered)
-	local part = createPart(parent, name, Vector3.new(7, 3, 7), position, colorName, Enum.Material.Neon, 0.12)
+	local base = createPart(parent, name, Vector3.new(7, 1.2, 7), position, colorName, Enum.Material.Neon, 0.08)
+	local tower = createPart(parent, name .. "Tower", Vector3.new(4, 4, 4), position + Vector3.new(0, 2.6, 0), colorName, Enum.Material.SmoothPlastic, 0.05)
 
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = name .. "Prompt"
@@ -57,10 +61,10 @@ local function createPromptPart(parent, name, position, colorName, objectText, a
 	prompt.ActionText = actionText
 	prompt.HoldDuration = 0.35
 	prompt.MaxActivationDistance = 13
-	prompt.Parent = part
+	prompt.Parent = tower
 	prompt.Triggered:Connect(onTriggered)
 
-	return part
+	return tower, base
 end
 
 local function damageCharacterFromHazard(hit, damage, cooldownAttribute)
@@ -83,18 +87,39 @@ local function damageCharacterFromHazard(hit, damage, cooldownAttribute)
 	InventoryService.refresh(player)
 end
 
+local function setupLighting()
+	Lighting.ClockTime = 17.5
+	Lighting.Brightness = 2
+	Lighting.Ambient = Color3.fromRGB(80, 90, 115)
+	Lighting.OutdoorAmbient = Color3.fromRGB(80, 90, 115)
+	Lighting.FogColor = Color3.fromRGB(18, 24, 38)
+	Lighting.FogEnd = 260
+end
+
+local function createDecor(parent)
+	for index = 1, 10 do
+		local x = -60 + (index * 12)
+		local rail = createPart(parent, "LowCover_" .. index, Vector3.new(8, 3, 2), Vector3.new(x, 2.5, -12), "Black", Enum.Material.Metal, 0.05)
+		rail.Orientation = Vector3.new(0, index % 2 == 0 and 18 or -18, 0)
+	end
+
+	createPart(parent, "CenterCore", Vector3.new(14, 7, 14), Vector3.new(0, 4.5, 0), "Royal purple", Enum.Material.Glass, 0.45)
+	createPart(parent, "CenterCoreLight", Vector3.new(9, 9, 9), Vector3.new(0, 6, 0), "Magenta", Enum.Material.Neon, 0.55)
+end
+
 local function createWorld()
 	clearOldWorld()
+	setupLighting()
 
 	local world = Instance.new("Folder")
 	world.Name = "RiskRaidWorld"
 	world.Parent = Workspace
 
-	createPart(world, "ArenaFloor", Vector3.new(150, 2, 150), Vector3.new(0, 0, 0), "Dark stone grey", Enum.Material.Concrete)
-	createPart(world, "NorthWall", Vector3.new(150, 18, 2), Vector3.new(0, 9, -75), "Really black", Enum.Material.Metal)
-	createPart(world, "SouthWall", Vector3.new(150, 18, 2), Vector3.new(0, 9, 75), "Really black", Enum.Material.Metal)
-	createPart(world, "EastWall", Vector3.new(2, 18, 150), Vector3.new(75, 9, 0), "Really black", Enum.Material.Metal)
-	createPart(world, "WestWall", Vector3.new(2, 18, 150), Vector3.new(-75, 9, 0), "Really black", Enum.Material.Metal)
+	createPart(world, "ArenaFloor", Vector3.new(150, 2, 150), Vector3.new(0, 0, 0), "Dark stone grey", Enum.Material.Slate)
+	createPart(world, "NorthWall", Vector3.new(150, 16, 2), Vector3.new(0, 8, -75), "Black", Enum.Material.Metal)
+	createPart(world, "SouthWall", Vector3.new(150, 16, 2), Vector3.new(0, 8, 75), "Black", Enum.Material.Metal)
+	createPart(world, "EastWall", Vector3.new(2, 16, 150), Vector3.new(75, 8, 0), "Black", Enum.Material.Metal)
+	createPart(world, "WestWall", Vector3.new(2, 16, 150), Vector3.new(-75, 8, 0), "Black", Enum.Material.Metal)
 
 	local spawnLocation = Instance.new("SpawnLocation")
 	spawnLocation.Name = "LobbySpawn"
@@ -104,30 +129,31 @@ local function createWorld()
 	spawnLocation.Neutral = true
 	spawnLocation.BrickColor = BrickColor.new("Bright yellow")
 	spawnLocation.Material = Enum.Material.Neon
+	spawnLocation.Transparency = 0.15
 	spawnLocation.Parent = world
 
-	createSign(world, "RiskRaidSign", "RISKRaid\nSTASH • LOADOUT • RAID • EXTRACT", Vector3.new(0, 9, -73.8), Vector3.new(40, 9, 1), Color3.fromRGB(255, 225, 90))
+	createSign(world, "RiskRaidSign", "RISKRaid\nSTASH • LOADOUT • RAID • EXTRACT", Vector3.new(0, 9, -73.8), Vector3.new(42, 8, 1), Color3.fromRGB(255, 225, 90))
 
-	createPart(world, "LobbyPad", Vector3.new(54, 1, 24), Vector3.new(0, 1, -58), "Bright yellow", Enum.Material.Neon, 0.7)
-	createSign(world, "LobbySign", "LOBBY\nClaim kit, equip loadout, deploy", Vector3.new(0, 7, -45), Vector3.new(36, 6, 1), Color3.fromRGB(255, 240, 130))
+	createPart(world, "LobbyPad", Vector3.new(58, 1, 24), Vector3.new(0, 1, -58), "Bright yellow", Enum.Material.Neon, 0.75)
+	createSign(world, "LobbySign", "LOBBY\nClaim kit, equip loadout, deploy", Vector3.new(0, 7, -45), Vector3.new(36, 5, 1), Color3.fromRGB(255, 240, 130))
 
-	createPromptPart(world, "ClaimStarterKit", Vector3.new(-22, 3, -61), "Bright yellow", "Starter Kit", "Claim", function(player)
+	createPromptPart(world, "ClaimStarterKit", Vector3.new(-22, 2, -61), "Bright yellow", "Starter Kit", "Claim", function(player)
 		InventoryService.claimStarterKit(player)
 	end)
 
-	createPromptPart(world, "EquipBlaster", Vector3.new(-10, 3, -61), "Cyan", "Pulse Blaster", "Equip", function(player)
+	createPromptPart(world, "EquipBlaster", Vector3.new(-10, 2, -61), "Cyan", "Pulse Blaster", "Equip", function(player)
 		InventoryService.moveStashItemToRun(player, "BasicBlaster")
 	end)
 
-	createPromptPart(world, "EquipMedKit", Vector3.new(2, 3, -61), "Lime green", "Med Kit", "Equip", function(player)
+	createPromptPart(world, "EquipMedKit", Vector3.new(2, 2, -61), "Lime green", "Med Kit", "Equip", function(player)
 		InventoryService.moveStashItemToRun(player, "MedKit")
 	end)
 
-	createPromptPart(world, "EquipArmor", Vector3.new(14, 3, -61), "Institutional white", "Armor Plate", "Equip", function(player)
+	createPromptPart(world, "EquipArmor", Vector3.new(14, 2, -61), "Institutional white", "Armor Plate", "Equip", function(player)
 		InventoryService.moveStashItemToRun(player, "ArmorPlate")
 	end)
 
-	createPromptPart(world, "DeployToRaid", Vector3.new(28, 3, -61), "Really blue", "Deploy Gate", "Deploy", function(player)
+	createPromptPart(world, "DeployToRaid", Vector3.new(28, 2, -61), "Really blue", "Deploy Gate", "Deploy", function(player)
 		InventoryService.deploy(player)
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -136,15 +162,16 @@ local function createWorld()
 		end
 	end)
 
-	createPart(world, "HighRiskZone", Vector3.new(38, 1, 38), Vector3.new(0, 1, 0), "Royal purple", Enum.Material.Neon, 0.65)
-	createSign(world, "VaultSign", "HIGH RISK VAULT\nBetter loot, more danger", Vector3.new(0, 8, -20), Vector3.new(30, 6, 1), Color3.fromRGB(235, 160, 255))
+	createPart(world, "HighRiskZone", Vector3.new(42, 1, 42), Vector3.new(0, 1, 0), "Royal purple", Enum.Material.Neon, 0.72)
+	createSign(world, "VaultSign", "HIGH RISK VAULT\nBetter loot, more danger", Vector3.new(0, 8, -24), Vector3.new(30, 5, 1), Color3.fromRGB(235, 160, 255))
 
-	local killBlock = createPart(world, "DangerBlock_TestDrop", Vector3.new(12, 1, 12), Vector3.new(58, 1, 58), "Really red", Enum.Material.Neon, 0.1)
+	local killBlock = createPart(world, "DangerBlock_TestDrop", Vector3.new(12, 1, 12), Vector3.new(58, 1, 58), "Really red", Enum.Material.Neon, 0.25)
 	killBlock.Touched:Connect(function(hit)
 		damageCharacterFromHazard(hit, 999, "DropTestCooldown")
 	end)
 	createSign(world, "DropTestSign", "DROP TEST", Vector3.new(58, 6, 66), Vector3.new(14, 4, 1), Color3.fromRGB(255, 90, 90))
 
+	createDecor(world)
 	LootService.setup(world)
 	ExtractionService.setup(world)
 	BotService.setup(world)
@@ -153,7 +180,7 @@ end
 local function setupPlayer(player)
 	DataService.setupPlayer(player)
 	InventoryService.refresh(player)
-	Remotes.message(player, "Welcome to RiskRaid Vertical Slice. Equip loadout, deploy, extract.")
+	Remotes.message(player, "Welcome to RiskRaid. Equip loadout, deploy, extract.")
 
 	player.CharacterAdded:Connect(function(character)
 		DeathDropService.attachCharacter(player, character)
@@ -175,4 +202,4 @@ for _, player in ipairs(Players:GetPlayers()) do
 	setupPlayer(player)
 end
 
-print("RiskRaid vertical slice server loaded.")
+print("RiskRaid polished vertical slice server loaded.")
