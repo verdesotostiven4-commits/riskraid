@@ -10,11 +10,21 @@ local function buildSnapshot(player)
 	local snapshot = DataService.getSnapshot(player)
 	snapshot.runValue = ItemConfig.getInventoryValue(snapshot.runInventory)
 	snapshot.stashValue = ItemConfig.getInventoryValue(snapshot.stash)
+	snapshot.runWeight = ItemConfig.getInventoryWeight(snapshot.runInventory)
+	snapshot.maxWeight = ItemConfig.MaxBackpackWeight
+	snapshot.rank = ItemConfig.getRankFromStashValue(snapshot.stashValue)
 	return snapshot
 end
 
 function InventoryService.refresh(player)
 	Remotes.sendInventory(player, buildSnapshot(player))
+end
+
+function InventoryService.canAddItems(player, itemIds)
+	local snapshot = DataService.getSnapshot(player)
+	local currentWeight = ItemConfig.getInventoryWeight(snapshot.runInventory)
+	local addedWeight = ItemConfig.getInventoryWeight(itemIds)
+	return currentWeight + addedWeight <= ItemConfig.MaxBackpackWeight, currentWeight, addedWeight
 end
 
 function InventoryService.addRunItem(player, itemId, amount, reason)
@@ -24,11 +34,23 @@ function InventoryService.addRunItem(player, itemId, amount, reason)
 		return false
 	end
 
+	local itemsToAdd = {}
+	for _ = 1, amount or 1 do
+		table.insert(itemsToAdd, itemId)
+	end
+
+	local canAdd = InventoryService.canAddItems(player, itemsToAdd)
+	if not canAdd then
+		Remotes.message(player, ("Backpack full. Cannot take %s. Extract or steal less."):format(item.name))
+		InventoryService.refresh(player)
+		return false
+	end
+
 	DataService.addRunItem(player, itemId, amount or 1)
 	InventoryService.refresh(player)
 
 	if reason ~= "silent" then
-		Remotes.message(player, ("+ %s [%s]"):format(item.name, item.rarity))
+		Remotes.message(player, ("+ %s [%s] | $%d"):format(item.name, item.rarity, item.value))
 	end
 
 	return true
@@ -44,7 +66,7 @@ function InventoryService.extract(player)
 	end
 
 	local value = ItemConfig.getInventoryValue(itemsToMove)
-	DataService.moveRunToStash(player)
+	DataService.moveRunToStash(player, value)
 	InventoryService.refresh(player)
 	Remotes.message(player, ("Extraction successful: %d items secured. Value: $%d"):format(#itemsToMove, value))
 
@@ -58,6 +80,13 @@ function InventoryService.removeRunInventory(player)
 end
 
 function InventoryService.addLootBagItems(player, itemIds)
+	local canAdd = InventoryService.canAddItems(player, itemIds)
+	if not canAdd then
+		Remotes.message(player, "Loot bag is too heavy for your backpack. Extract first or reduce weight.")
+		InventoryService.refresh(player)
+		return false
+	end
+
 	for _, itemId in ipairs(itemIds) do
 		DataService.addRunItem(player, itemId, 1)
 	end
@@ -67,6 +96,7 @@ function InventoryService.addLootBagItems(player, itemIds)
 
 	local value = ItemConfig.getInventoryValue(itemIds)
 	Remotes.message(player, ("Loot bag stolen: %d items. Value: $%d"):format(#itemIds, value))
+	return true
 end
 
 return InventoryService
