@@ -32,6 +32,28 @@ local function setBotActive(bot, active)
 	bot:SetAttribute("Active", active)
 	bot.CanTouch = active
 	bot.Transparency = active and 0 or 0.75
+
+	local prompt = bot:FindFirstChild("DisablePrompt")
+	if prompt then
+		prompt.Enabled = active
+	end
+end
+
+local function finishBot(bot, player)
+	setBotActive(bot, false)
+	DataService.incrementStat(player, "botKills", 1)
+
+	local rewardItem = ItemConfig.rollLoot(randomGenerator, "BotDrop")
+	InventoryService.addRunItem(player, rewardItem, 1, "silent")
+	local item = ItemConfig.getItem(rewardItem)
+	Remotes.message(player, ("Sentry disabled. Salvaged %s."):format(item and item.name or rewardItem))
+
+	task.delay(18, function()
+		if bot and bot.Parent then
+			bot:SetAttribute("Health", bot:GetAttribute("MaxHealth") or 70)
+			setBotActive(bot, true)
+		end
+	end)
 end
 
 local function moveBetween(bot, startPosition, endPosition)
@@ -77,6 +99,19 @@ local function createBot(parent, config)
 	light.Color = Color3.fromRGB(255, 70, 70)
 	light.Parent = bot
 
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "DisablePrompt"
+	prompt.ActionText = "Disable"
+	prompt.ObjectText = "Security Sentry"
+	prompt.HoldDuration = 1.4
+	prompt.MaxActivationDistance = 9
+	prompt.Parent = bot
+	prompt.Triggered:Connect(function(player)
+		if bot:GetAttribute("Active") then
+			finishBot(bot, player)
+		end
+	end)
+
 	bot.Touched:Connect(function(hit)
 		local character = hit.Parent
 		local humanoid = character and character:FindFirstChildWhichIsA("Humanoid")
@@ -85,14 +120,14 @@ local function createBot(parent, config)
 			return
 		end
 
-		local lastHitAt = character:GetAttribute("SentryHitAt") or 0
-		if os.clock() - lastHitAt < 1.1 then
+		local lastContactAt = character:GetAttribute("SentryContactAt") or 0
+		if os.clock() - lastContactAt < 1.1 then
 			return
 		end
 
-		character:SetAttribute("SentryHitAt", os.clock())
+		character:SetAttribute("SentryContactAt", os.clock())
 		humanoid:TakeDamage(25)
-		Remotes.message(player, "Security bot hit you. Keep distance or extract.")
+		Remotes.message(player, "Security contact: keep distance or disable the sentry.")
 	end)
 
 	moveBetween(bot, config.start, config.finish)
@@ -118,23 +153,10 @@ function BotService.handleHit(bot, player, amount)
 	local health = bot:GetAttribute("Health") or 0
 	health -= amount
 	bot:SetAttribute("Health", health)
-	Remotes.message(player, ("Security bot integrity: %d"):format(math.max(0, health)))
+	Remotes.message(player, ("Security integrity: %d"):format(math.max(0, health)))
 
 	if health <= 0 then
-		setBotActive(bot, false)
-		DataService.incrementStat(player, "botKills", 1)
-
-		local rewardItem = ItemConfig.rollLoot(randomGenerator, "BotDrop")
-		InventoryService.addRunItem(player, rewardItem, 1, "silent")
-		local item = ItemConfig.getItem(rewardItem)
-		Remotes.message(player, ("Bot disabled. Salvaged %s."):format(item and item.name or rewardItem))
-
-		task.delay(18, function()
-			if bot and bot.Parent then
-				bot:SetAttribute("Health", bot:GetAttribute("MaxHealth") or 70)
-				setBotActive(bot, true)
-			end
-		end)
+		finishBot(bot, player)
 	end
 
 	return true
