@@ -1,0 +1,23 @@
+{
+  "name": "RiskRaid",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "RiskRaidShared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "RiskRaidServer": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "RiskRaidClient": {
+          "$path": "src/client"
+        }
+      }
+    }
+  }
+}
