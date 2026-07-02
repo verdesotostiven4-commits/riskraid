@@ -12,23 +12,35 @@ local raidMessage = remotes:WaitForChild("RaidMessage")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "RiskRaidHUD"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = false
 screenGui.Parent = playerGui
 
 local panel = Instance.new("Frame")
 panel.Name = "Panel"
-panel.Size = UDim2.fromOffset(420, 300)
-panel.Position = UDim2.fromOffset(16, 16)
-panel.BackgroundTransparency = 0.12
-panel.BackgroundColor3 = Color3.fromRGB(6, 8, 12)
+panel.AnchorPoint = Vector2.new(1, 0)
+panel.Size = UDim2.fromOffset(330, 210)
+panel.Position = UDim2.new(1, -18, 0, 18)
+panel.BackgroundTransparency = 0.08
+panel.BackgroundColor3 = Color3.fromRGB(9, 12, 20)
 panel.BorderSizePixel = 0
 panel.Parent = screenGui
 
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 14)
+corner.Parent = panel
+
+local stroke = Instance.new("UIStroke")
+stroke.Thickness = 1
+stroke.Transparency = 0.35
+stroke.Color = Color3.fromRGB(120, 170, 255)
+stroke.Parent = panel
+
 local title = Instance.new("TextLabel")
 title.Name = "Title"
-title.Size = UDim2.new(1, -20, 0, 34)
-title.Position = UDim2.fromOffset(10, 8)
+title.Size = UDim2.new(1, -24, 0, 32)
+title.Position = UDim2.fromOffset(12, 10)
 title.BackgroundTransparency = 1
-title.Text = "RISKRaid v0.2"
+title.Text = "RISKRaid"
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.TextScaled = true
 title.Font = Enum.Font.GothamBlack
@@ -37,59 +49,65 @@ title.Parent = panel
 
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Name = "Status"
-statusLabel.Size = UDim2.new(1, -20, 0, 44)
-statusLabel.Position = UDim2.fromOffset(10, 46)
+statusLabel.Size = UDim2.new(1, -24, 0, 40)
+statusLabel.Position = UDim2.fromOffset(12, 46)
 statusLabel.BackgroundTransparency = 1
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
 statusLabel.TextYAlignment = Enum.TextYAlignment.Top
 statusLabel.TextWrapped = true
 statusLabel.Font = Enum.Font.GothamMedium
-statusLabel.TextSize = 15
-statusLabel.TextColor3 = Color3.fromRGB(190, 230, 255)
-statusLabel.Text = "Status loading..."
+statusLabel.TextSize = 13
+statusLabel.TextColor3 = Color3.fromRGB(190, 220, 255)
+statusLabel.Text = "Loading..."
 statusLabel.Parent = panel
 
 local runLabel = Instance.new("TextLabel")
 runLabel.Name = "RunInventory"
-runLabel.Size = UDim2.new(1, -20, 0, 82)
-runLabel.Position = UDim2.fromOffset(10, 92)
+runLabel.Size = UDim2.new(1, -24, 0, 46)
+runLabel.Position = UDim2.fromOffset(12, 88)
 runLabel.BackgroundTransparency = 1
 runLabel.TextXAlignment = Enum.TextXAlignment.Left
 runLabel.TextYAlignment = Enum.TextYAlignment.Top
 runLabel.TextWrapped = true
 runLabel.Font = Enum.Font.GothamMedium
-runLabel.TextSize = 15
-runLabel.TextColor3 = Color3.fromRGB(225, 225, 225)
-runLabel.Text = "Raid Backpack: empty"
+runLabel.TextSize = 13
+runLabel.TextColor3 = Color3.fromRGB(235, 235, 235)
+runLabel.Text = "Backpack: empty"
 runLabel.Parent = panel
 
 local stashLabel = Instance.new("TextLabel")
 stashLabel.Name = "Stash"
-stashLabel.Size = UDim2.new(1, -20, 0, 76)
-stashLabel.Position = UDim2.fromOffset(10, 174)
+stashLabel.Size = UDim2.new(1, -24, 0, 46)
+stashLabel.Position = UDim2.fromOffset(12, 136)
 stashLabel.BackgroundTransparency = 1
 stashLabel.TextXAlignment = Enum.TextXAlignment.Left
 stashLabel.TextYAlignment = Enum.TextYAlignment.Top
 stashLabel.TextWrapped = true
 stashLabel.Font = Enum.Font.GothamMedium
-stashLabel.TextSize = 15
-stashLabel.TextColor3 = Color3.fromRGB(200, 255, 200)
+stashLabel.TextSize = 13
+stashLabel.TextColor3 = Color3.fromRGB(190, 255, 205)
 stashLabel.Text = "Stash: empty"
 stashLabel.Parent = panel
 
 local messageLabel = Instance.new("TextLabel")
 messageLabel.Name = "Message"
-messageLabel.Size = UDim2.new(1, -20, 0, 42)
-messageLabel.Position = UDim2.fromOffset(10, 252)
-messageLabel.BackgroundTransparency = 1
-messageLabel.TextXAlignment = Enum.TextXAlignment.Left
+messageLabel.AnchorPoint = Vector2.new(0.5, 1)
+messageLabel.Size = UDim2.fromOffset(520, 42)
+messageLabel.Position = UDim2.new(0.5, 0, 1, -32)
+messageLabel.BackgroundTransparency = 0.15
+messageLabel.BackgroundColor3 = Color3.fromRGB(8, 10, 16)
+messageLabel.TextXAlignment = Enum.TextXAlignment.Center
 messageLabel.TextScaled = true
 messageLabel.Font = Enum.Font.GothamBold
 messageLabel.TextColor3 = Color3.fromRGB(255, 230, 120)
-messageLabel.Text = "Find crates. Extract alive."
-messageLabel.Parent = panel
+messageLabel.Text = "Claim kit, equip loadout, deploy."
+messageLabel.Parent = screenGui
 
-local function summarize(itemIds)
+local msgCorner = Instance.new("UICorner")
+msgCorner.CornerRadius = UDim.new(0, 12)
+msgCorner.Parent = messageLabel
+
+local function summarize(itemIds, limit)
 	if not itemIds or #itemIds == 0 then
 		return "empty"
 	end
@@ -107,28 +125,38 @@ local function summarize(itemIds)
 	end
 
 	table.sort(lines)
+	if limit and #lines > limit then
+		local visible = {}
+		for index = 1, limit do
+			table.insert(visible, lines[index])
+		end
+		table.insert(visible, ("+%d more"):format(#lines - limit))
+		return table.concat(visible, ", ")
+	end
+
 	return table.concat(lines, ", ")
 end
 
 inventoryUpdate.OnClientEvent:Connect(function(snapshot)
 	local stats = snapshot.stats or {}
-	statusLabel.Text = ("Rank: %s | Extracts: %d | Deaths: %d | Best Run: $%d"):format(
+	local stateText = snapshot.inRaid and "RAID" or "LOBBY"
+	statusLabel.Text = ("%s | %s | Extracts %d | Best $%d"):format(
+		stateText,
 		snapshot.rank or "ROOKIE",
 		stats.extractions or 0,
-		stats.deaths or 0,
 		stats.bestExtraction or 0
 	)
 
-	runLabel.Text = ("Raid Backpack: $%d | Weight: %d/%d\n%s"):format(
+	runLabel.Text = ("Backpack $%d | %d/%d\n%s"):format(
 		snapshot.runValue or 0,
 		snapshot.runWeight or 0,
-		snapshot.maxWeight or 10,
-		summarize(snapshot.runInventory)
+		snapshot.maxWeight or 12,
+		summarize(snapshot.runInventory, 3)
 	)
 
-	stashLabel.Text = ("Stash Value: $%d\n%s"):format(
+	stashLabel.Text = ("Stash $%d\n%s"):format(
 		snapshot.stashValue or 0,
-		summarize(snapshot.stash)
+		summarize(snapshot.stash, 3)
 	)
 end)
 
